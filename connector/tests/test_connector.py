@@ -1,25 +1,51 @@
 # -*- coding: utf-8 -*-
+# Copyright 2013-2017 Camptocamp SA
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html)
 
 import mock
-import unittest2
+import unittest
 
-from openerp.tests import common
-from openerp.addons.connector import connector
-from openerp.addons.connector.connector import (ConnectorUnit,
-                                                ConnectorEnvironment)
-from openerp.addons.connector.session import ConnectorSession
-
-
-class ConnectorHelpers(unittest2.TestCase):
-
-    def test_openerp_module_name(self):
-        name = connector._get_openerp_module_name('openerp.addons.sale')
-        self.assertEqual(name, 'sale')
-        name = connector._get_openerp_module_name('sale')
-        self.assertEqual(name, 'sale')
+from odoo import api
+from odoo.modules.registry import RegistryManager
+from odoo.tests import common
+from odoo.addons.connector import connector
+from odoo.addons.connector.exception import RetryableJobError
+from odoo.addons.connector.connector import (
+    is_module_installed,
+    get_odoo_module,
+    ConnectorEnvironment,
+    ConnectorUnit,
+    pg_try_advisory_lock,
+)
 
 
-class TestConnectorUnit(unittest2.TestCase):
+def mock_connector_unit(env):
+    backend_record = mock.Mock(name='BackendRecord')
+    backend_record.env = env
+    backend = mock.Mock(name='Backend')
+    backend_record.get_backend.return_value = backend
+    connector_env = connector.ConnectorEnvironment(backend_record,
+                                                   'res.users')
+    return ConnectorUnit(connector_env)
+
+
+class TestModuleInstalledFunctions(common.TransactionCase):
+
+    def test_is_module_installed(self):
+        """ Test on an installed module """
+        self.assertTrue(is_module_installed(self.env, 'connector'))
+
+    def test_is_module_uninstalled(self):
+        """ Test on an installed module """
+        self.assertFalse(is_module_installed(self.env, 'lambda'))
+
+    def test_get_odoo_module(self):
+        """ Odoo module is found from a Python path """
+        self.assertEquals(get_odoo_module(TestModuleInstalledFunctions),
+                          'connector')
+
+
+class TestConnectorUnit(unittest.TestCase):
     """ Test Connector Unit """
 
     def test_connector_unit_for_model_names(self):
@@ -47,10 +73,10 @@ class TestConnectorUnit(unittest2.TestCase):
         class ModelUnit(ConnectorUnit):
             _model_name = 'res.users'
 
-        session = mock.Mock(name='Session')
+        env = mock.Mock(name='Environment')
 
-        self.assertTrue(ModelUnit.match(session, 'res.users'))
-        self.assertFalse(ModelUnit.match(session, 'res.partner'))
+        self.assertTrue(ModelUnit.match(env, 'res.users'))
+        self.assertFalse(ModelUnit.match(env, 'res.partner'))
 
     def test_unit_for(self):
 
@@ -60,14 +86,13 @@ class TestConnectorUnit(unittest2.TestCase):
         class ModelBinder(ConnectorUnit):
             _model_name = 'res.users'
 
-        session = mock.MagicMock(name='Session')
         backend_record = mock.Mock(name='BackendRecord')
         backend = mock.Mock(name='Backend')
         backend_record.get_backend.return_value = backend
+        backend_record.env = mock.MagicMock(name='Environment')
         # backend.get_class() is tested in test_backend.py
         backend.get_class.return_value = ModelUnit
         connector_env = connector.ConnectorEnvironment(backend_record,
-                                                       session,
                                                        'res.users')
         unit = ConnectorUnit(connector_env)
         # returns an instance of ModelUnit with the same connector_env
@@ -89,14 +114,13 @@ class TestConnectorUnit(unittest2.TestCase):
         class ModelBinder(ConnectorUnit):
             _model_name = 'res.partner'
 
-        session = mock.MagicMock(name='Session')
         backend_record = mock.Mock(name='BackendRecord')
         backend = mock.Mock(name='Backend')
         backend_record.get_backend.return_value = backend
+        backend_record.env = mock.MagicMock(name='Environment')
         # backend.get_class() is tested in test_backend.py
         backend.get_class.return_value = ModelUnit
         connector_env = connector.ConnectorEnvironment(backend_record,
-                                                       session,
                                                        'res.users')
         unit = ConnectorUnit(connector_env)
         # returns an instance of ModelUnit with a new connector_env
@@ -122,31 +146,23 @@ class TestConnectorUnitTransaction(common.TransactionCase):
         class ModelUnit(ConnectorUnit):
             _model_name = 'res.users'
 
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
-        backend_record = mock.Mock(name='BackendRecord')
-        backend = mock.Mock(name='Backend')
-        backend_record.get_backend.return_value = backend
-        connector_env = connector.ConnectorEnvironment(backend_record,
-                                                       session,
-                                                       'res.users')
-        unit = ConnectorUnit(connector_env)
+        unit = mock_connector_unit(self.env)
         self.assertEqual(unit.model, self.env['res.users'])
         self.assertEqual(unit.env, self.env)
         self.assertEqual(unit.localcontext, self.env.context)
 
 
-class TestConnectorEnvironment(unittest2.TestCase):
+class TestConnectorEnvironment(unittest.TestCase):
 
     def test_create_environment_no_connector_env(self):
-        session = mock.MagicMock(name='Session')
         backend_record = mock.Mock(name='BackendRecord')
         backend = mock.Mock(name='Backend')
         backend_record.get_backend.return_value = backend
+        backend_record.env = mock.MagicMock(name='Environment')
         model = 'res.user'
 
         connector_env = ConnectorEnvironment.create_environment(
-            backend_record, session, model
+            backend_record, model
         )
 
         self.assertEqual(type(connector_env), ConnectorEnvironment)
@@ -156,24 +172,66 @@ class TestConnectorEnvironment(unittest2.TestCase):
         class MyConnectorEnvironment(ConnectorEnvironment):
             _propagate_kwargs = ['api']
 
-            def __init__(self, backend_record, session, model_name, api=None):
+            def __init__(self, backend_record, model_name, api=None):
                 super(MyConnectorEnvironment, self).__init__(backend_record,
-                                                             session,
                                                              model_name)
                 self.api = api
 
-        session = mock.MagicMock(name='Session')
         backend_record = mock.Mock(name='BackendRecord')
         backend = mock.Mock(name='Backend')
         backend_record.get_backend.return_value = backend
+        backend_record.env = mock.MagicMock(name='Environment')
         model = 'res.user'
-        api = object()
 
-        cust_env = MyConnectorEnvironment(backend_record, session, model,
+        cust_env = MyConnectorEnvironment(backend_record, model,
                                           api=api)
 
-        new_env = cust_env.create_environment(backend_record, session, model,
+        new_env = cust_env.create_environment(backend_record, model,
                                               connector_env=cust_env)
 
         self.assertEqual(type(new_env), MyConnectorEnvironment)
         self.assertEqual(new_env.api, api)
+
+
+class TestAdvisoryLock(common.TransactionCase):
+
+    def setUp(self):
+        super(TestAdvisoryLock, self).setUp()
+        self.registry2 = RegistryManager.get(common.get_db_name())
+        self.cr2 = self.registry2.cursor()
+        self.env2 = api.Environment(self.cr2, self.env.uid, {})
+
+        @self.addCleanup
+        def reset_cr2():
+            # rollback and close the cursor, and reset the environments
+            self.env2.reset()
+            self.cr2.rollback()
+            self.cr2.close()
+
+    def test_concurrent_lock(self):
+        """ 2 concurrent transactions cannot acquire the same lock """
+        lock = 'import_record({}, {}, {}, {})'.format(
+            'backend.name',
+            1,
+            'res.partner',
+            '999999',
+        )
+        acquired = pg_try_advisory_lock(self.env, lock)
+        self.assertTrue(acquired)
+        inner_acquired = pg_try_advisory_lock(self.env2, lock)
+        self.assertFalse(inner_acquired)
+
+    def test_concurrent_import_lock(self):
+        """ A 2nd concurrent transaction must retry """
+        lock = 'import_record({}, {}, {}, {})'.format(
+            'backend.name',
+            1,
+            'res.partner',
+            '999999',
+        )
+        connector_unit = mock_connector_unit(self.env)
+        connector_unit.advisory_lock_or_retry(lock)
+        connector_unit2 = mock_connector_unit(self.env2)
+        with self.assertRaises(RetryableJobError) as cm:
+            connector_unit2.advisory_lock_or_retry(lock, retry_seconds=3)
+            self.assertEquals(cm.exception.seconds, 3)

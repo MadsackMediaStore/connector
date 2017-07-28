@@ -44,14 +44,6 @@ Core Features
 .. _`AGPL version 3`: http://www.gnu.org/licenses/agpl-3.0.html
 .. _`project's mailing list (name: Connectors)`: https://odoo-community.org/groups
 
-****************************************
-Last minute information regarding Odoo 9
-****************************************
-
-* A crowdfunding campaign is currently running to finance the migration of this connector to make it compatible with Odoo 9. **Be part of this project now!** `More info here`_
-
-.. _`More info here`: https://www.indiegogo.com/projects/odoo-connector-odoo-magento-connector-for-odoo-9#/
-
 *********************************
 Connectors based on the framework
 *********************************
@@ -59,7 +51,6 @@ Connectors based on the framework
 * `Magento Connector <http://www.odoo-magento-connector.com>`_
 * `Prestashop Connector <https://github.com/OCA/connector-prestashop>`_
 * `solerp (Solr Connector) <https://github.com/akretion/solerp>`_
-* `Odoo Multi Company <http://www.openerp.net.cn/new-intercompany-process-module/>`_
 * `CMIS <https://github.com/OCA/connector-cmis>`_
 * `Odoo Asynchronous import module <https://github.com/OCA/connector-interfaces/tree/8.0/base_import_async>`_
 * `Salesforce Connector <https://github.com/OCA/connector-salesforce>`_
@@ -81,7 +72,7 @@ Overview
 .. raw:: html
 
     <div style="margin-top:10px;">
-         <iframe src="http://www.slideshare.net/slideshow/embed_code/24048994?rel=0" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://fr.slideshare.net/openobject/ecommerce-the-new-magento-open-erp-connector-a-generic-connector-to-any-apps-luc-maurer-guewen-baconnier-camptocamp" title="E-commerce: the new Magento - Odoo Connector: a generic connector to any apps. Luc Maurer &amp; Guewen Baconnier, Camptocamp" target="_blank">E-commerce: the new Magento - Odoo Connector: a generic connector to any apps. Luc Maurer &amp; Guewen Baconnier, Camptocamp (OpenERP Days 2013)</a> </strong> from <strong><a href="http://www.slideshare.net/openobject" target="_blank">OpenERP.tv</a></strong> </div>
+         <iframe src="http://www.slideshare.net/slideshow/embed_code/24048994?rel=0" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://fr.slideshare.net/openobject/ecommerce-the-new-magento-open-erp-connector-a-generic-connector-to-any-apps-luc-maurer-guewen-baconnier-camptocamp" title="E-commerce: the new Magento - Odoo Connector: a generic connector to any apps. Luc Maurer &amp; Guewen Baconnier, Camptocamp" target="_blank">E-commerce: the new Magento - Odoo Connector: a generic connector to any apps. Luc Maurer &amp; Guewen Baconnier, Camptocamp (Odoo Days 2013)</a> </strong> from <strong><a href="http://www.slideshare.net/openobject" target="_blank">Odoo.tv</a></strong> </div>
     </div>
 
 **************************
@@ -123,7 +114,6 @@ Developer's guide
    guides/concepts.rst
    guides/bootstrap_connector.rst
    guides/jobrunner.rst
-   guides/multiprocessing.rst
 
 API Reference
 =============
@@ -132,7 +122,6 @@ API Reference
    :maxdepth: 1
 
    api/api_connector.rst
-   api/api_session.rst
    api/api_backend.rst
    api/api_event.rst
    api/api_binder.rst

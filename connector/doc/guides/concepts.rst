@@ -49,48 +49,10 @@ A connectors developer is mostly interested by:
 Jobs Queue
 **********
 
-This section summarises the Job's Queue,
-which articulates around several classes,
-in broad terms,
-:py:class:`~connector.queue.job.Job`
-are executed by a
-:py:class:`~connector.queue.worker.Worker`
-which stores them in a
-:py:class:`~connector.queue.queue.JobsQueue`.
-
-Jobs are stored in the
-:py:class:`~connector.queue.model.QueueJob` model.
-
-Workers are stored in the
-:py:class:`~connector.queue.model.QueueWorker` model.
-A :py:class:`~connector.queue.worker.WorkerWatcher` create or destroy
-new workers when new :py:class:`~openerp.modules.registry.Registry` are
-created or destroyed, and signal the aliveness of the workers.
-
-Jobs are assigned to a worker in the database by a cron.
-The worker loads all the jobs assigned to itself in memory in the
-:py:class:`~connector.queue.queue.JobsQueue`.
-When a worker is dead, it is removed from the database,
-so the jobs are freeed from the worker and can be assigned to another
-one.
-
-When multiple Odoo processes are running,
-a worker per process is running, but only those which are *CronWorkers*
-enqueue and execute jobs, to avoid to clutter the HTTP processes.
-
 A connectors developer is mostly interested by:
 
 * Delay a job (see the decorator :py:func:`~connector.queue.job.job`)
 
-
-*******
-Session
-*******
-
-A :py:class:`~connector.session.ConnectorSession` is a container for the usual
-``cr``, ``uid``, ``context`` used in Odoo. Now, it contains the Odoo
-``Environment`` as ``self.env``.
-We use them accross the connectors.
 
 *******
 Backend
@@ -130,7 +92,7 @@ is the scope from which we will do synchronizations.
 It contains a :py:class:`~connector.backend.Backend`,
 a record of a concrete subclass of the model
 :py:class:`~connector.backend_model.connector_backend`,
-a :py:class:`~connector.session.Session`
+a :py:class:`odoo.api.Environment`
 and the name of the model to work with.
 
 A connectors developer is mostly interested by:
